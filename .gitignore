@@ -1,0 +1,10 @@
+# 编译产物
+/demo/demo
+godemo
+*.exe
+
+# 测试与编辑器
+*.test
+*.out
+.idea/
+.vscode/

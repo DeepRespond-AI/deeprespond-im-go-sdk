@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IM · Go SDK Demo</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- 登录页 -->
+<div id="view-login" class="login-wrap hidden">
+  <div class="login-card">
+    <div class="login-logo">IM</div>
+    <h1>Go SDK Demo</h1>
+    <p class="login-sub">基于 sdk-go 的完整即时通讯演示</p>
+    <div class="login-field">
+      <input id="login-username" placeholder="用户名" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <input id="login-password" type="password" placeholder="密码" autocomplete="current-password">
+    </div>
+    <div id="login-error" class="login-error hidden"></div>
+    <button id="login-btn" class="btn-primary">登 录</button>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="view-app" class="app hidden">
+  <nav class="nav">
+    <div class="nav-logo">IM</div>
+    <button class="nav-btn" data-act="nav-tab" data-tab="chat" title="聊天">
+      <svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 3 6.5 3 10.8c0 2.4 1.2 4.5 3.2 5.9l-.7 3 3.3-1.7c1 .3 2.1.4 3.2.4 5.1 0 9-3.5 9-7.8S17.1 3 12 3z"/></svg>
+      <span class="nav-badge hidden" id="badge-chat"></span>
+    </button>
+    <button class="nav-btn" data-act="nav-tab" data-tab="contacts" title="通讯录">
+      <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5z"/></svg>
+      <span class="nav-badge hidden" id="badge-contacts"></span>
+    </button>
+    <button class="nav-btn" data-act="nav-tab" data-tab="groups" title="群组">
+      <svg viewBox="0 0 24 24"><path d="M8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM8 13c-2.7 0-6 1.4-6 4v2h8.5v-2a6.3 6.3 0 0 1 2.1-4.4A10 10 0 0 0 8 13zm8 0c-.7 0-1.5.1-2.3.3A5.5 5.5 0 0 1 15.5 17v2H22v-2c0-2.6-3.3-4-6-4z"/></svg>
+      <span class="nav-badge hidden" id="badge-groups"></span>
+    </button>
+    <button class="nav-btn" data-act="nav-tab" data-tab="me" title="我的">
+      <svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-4 0-8 2-8 5.5V21h16v-1.5C20 16 16 14 12 14z"/></svg>
+    </button>
+    <div class="nav-foot"><span id="conn-dot" class="conn-dot off"></span></div>
+  </nav>
+
+  <section class="pane pane-list" id="pane-list"></section>
+  <section class="pane pane-main" id="pane-main">
+    <div class="main-empty">选择一个会话开始聊天</div>
+  </section>
+</div>
+
+<!-- 悬浮菜单 -->
+<div id="menu" class="menu hidden"></div>
+<!-- 弹窗遮罩 -->
+<div id="overlay" class="overlay hidden"></div>
+<!-- 轻提示 -->
+<div id="toast" class="toast hidden"></div>
+<!-- 被踢下线 -->
+<div id="kicked" class="kicked hidden">
+  <div class="kicked-card">
+    <div class="kicked-title">会话已失效</div>
+    <div class="kicked-reason" id="kicked-reason"></div>
+    <button class="btn-primary" data-act="kicked-relogin">重新登录</button>
+  </div>
+</div>
+
+<input type="file" id="file-image" accept="image/*" class="hidden">
+<input type="file" id="file-any" class="hidden">
+
+<script src="app.js"></script>
+</body>
+</html>
