@@ -114,9 +114,14 @@ type GroupMember struct {
 
 // GroupMemberResult 批量成员变更的单项结果。
 type GroupMemberResult struct {
-	Username string    `json:"username"`
-	Result   string    `json:"result,omitempty"` // ok|already_member|not_member|...
-	Error    *APIError `json:"error,omitempty"`
+	Username string          `json:"username"`
+	Status   string          `json:"status,omitempty"` // joined|invited|pending_review|already_member|removed|not_member
+	Code     string          `json:"code,omitempty"`
+	Message  string          `json:"message,omitempty"`
+	Details  json.RawMessage `json:"details,omitempty"`
+	// Deprecated: 服务端当前返回 status、code、message、details；保留以兼容旧数据。
+	Result string    `json:"result,omitempty"` // ok|already_member|not_member|...
+	Error  *APIError `json:"error,omitempty"`
 }
 
 // GroupInvitation 收到的群邀请。

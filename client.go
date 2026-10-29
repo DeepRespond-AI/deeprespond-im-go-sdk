@@ -17,14 +17,14 @@ import (
 
 // Config 客户端配置。
 type Config struct {
-	AppKey string // 组织#应用，如 "org#myapp"
+	AppKey string // 组织#应用，如 "6526900072#myapp"
 	APIURL string // REST 基址，如 "http://127.0.0.1:18480"
 
 	WSURL        string        // 可选：WS 地址；缺省由 APIURL 推导 http→ws + /client/v1/ws
 	DeviceID     string        // 可选：设备 ID；缺省启动时生成并保存在 Client 内
 	DeviceName   string        // 可选：设备名，缺省 "go"
 	Platform     string        // 可选：平台标识（ios/android/web/...），缺省 "go"
-	SDKVersion   string        // 可选：缺省 "1.0.0-alpha"
+	SDKVersion   string        // 可选：缺省 "1.0.1"
 	OSVersion    string        // 可选
 	AppVersion   string        // 可选
 	HTTPTimeout  time.Duration // 可选：REST 超时，缺省 15s
@@ -83,7 +83,7 @@ func New(cfg Config) (*Client, error) {
 		cfg.Platform = "go"
 	}
 	if cfg.SDKVersion == "" {
-		cfg.SDKVersion = "1.0.0-alpha"
+		cfg.SDKVersion = "1.0.1"
 	}
 	if cfg.HTTPTimeout <= 0 {
 		cfg.HTTPTimeout = 15 * time.Second

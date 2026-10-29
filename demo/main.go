@@ -99,7 +99,7 @@ func (t *sessionTable) drop(id string) {
 func main() {
 	flag.Parse()
 	if *flagAppKey == "" {
-		log.Fatal("缺少 --app-key（或环境变量 APP_KEY），形如 org#myapp")
+		log.Fatal("缺少 --app-key（或环境变量 APP_KEY），形如 6526900072#myapp")
 	}
 
 	sub, err := fs.Sub(webFS, "web")

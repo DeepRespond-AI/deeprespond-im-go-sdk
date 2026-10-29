@@ -1132,8 +1132,10 @@ document.addEventListener("click", async (e) => {
       case "group-invite":
         friendCheckDialog("邀请好友进群", async (picked) => {
           if (!picked.length) return;
-          await bridge("invite_group", { group_id: d.gid, users: picked });
-          toast("邀请完成");
+          const results = await bridge("invite_group", { group_id: d.gid, users: picked });
+          const labels = { joined: "已加入群聊", invited: "已发送邀请，等待对方确认", pending_review: "已提交，等待管理员审核", already_member: "已在群中" };
+          const text = results.map((r) => `${r.username}：${r.code === "rate_limited" && r.details?.reason === "declined_cooldown" ? "对方已退群或拒绝邀请，24 小时内不能再次邀请；对方可主动申请或通过入群链接加入" : r.message || r.code || labels[r.status] || r.error?.message || "邀请未完成"}`).join("\n");
+          alert(text || "未返回邀请结果，请刷新群成员后重试");
           S.members[d.gid] = null;
           renderGroupDetail();
         });
