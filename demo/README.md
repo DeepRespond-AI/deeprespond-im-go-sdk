@@ -23,9 +23,9 @@ go run ./demo \
 
 ## 下载包与二进制构建
 
-[下载 v1.0.1 源码 ZIP](https://github.com/DeepRespond-AI/deeprespond-im-go-sdk/archive/refs/tags/v1.0.1.zip)。
+[下载 v1.0.2 源码 ZIP](https://github.com/DeepRespond-AI/deeprespond-im-go-sdk/archive/refs/tags/v1.0.2.zip)。
 
-解压后进入 `deeprespond-im-go-sdk-1.0.1`。SDK 与页面源码已包含在仓库中，在仓库根目录编译：
+解压后进入 `deeprespond-im-go-sdk-1.0.2`。SDK 与页面源码已包含在仓库中，在仓库根目录编译：
 
 ```bash
 go build -o /tmp/im-go-client-demo ./demo

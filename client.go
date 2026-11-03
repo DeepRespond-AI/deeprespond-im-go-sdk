@@ -24,7 +24,7 @@ type Config struct {
 	DeviceID     string        // 可选：设备 ID；缺省启动时生成并保存在 Client 内
 	DeviceName   string        // 可选：设备名，缺省 "go"
 	Platform     string        // 可选：平台标识（ios/android/web/...），缺省 "go"
-	SDKVersion   string        // 可选：缺省 "1.0.1"
+	SDKVersion   string        // 可选：缺省 "1.0.2"
 	OSVersion    string        // 可选
 	AppVersion   string        // 可选
 	HTTPTimeout  time.Duration // 可选：REST 超时，缺省 15s
@@ -56,6 +56,7 @@ type Client struct {
 	connected bool
 	ws        *wsManager
 	store     *Store
+	ai        *AIModule
 
 	syncRetried bool // SyncAll 对 reset/recent_required 的重入保护
 	log         Logger
@@ -83,7 +84,7 @@ func New(cfg Config) (*Client, error) {
 		cfg.Platform = "go"
 	}
 	if cfg.SDKVersion == "" {
-		cfg.SDKVersion = "1.0.1"
+		cfg.SDKVersion = "1.0.2"
 	}
 	if cfg.HTTPTimeout <= 0 {
 		cfg.HTTPTimeout = 15 * time.Second
@@ -95,6 +96,7 @@ func New(cfg Config) (*Client, error) {
 		store:  newStore(),
 		log:    cfg.Logger,
 	}
+	c.ai = newAIModule(c)
 	if cfg.TokenStorage != nil {
 		if s, err := cfg.TokenStorage.Load(cfg.AppKey); err == nil && s != nil {
 			c.session = s

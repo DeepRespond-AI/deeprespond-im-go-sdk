@@ -448,6 +448,19 @@ func previewOf(m *im.Message) string {
 		return "[视频]"
 	case "tip":
 		return m.TextBody()
+	case "ai":
+		body := im.BodyOf(m)
+		switch {
+		case body == nil:
+			return "[AI 回复]"
+		case body.Status == im.AIStreaming:
+			return "正在回复…"
+		case body.Status == im.AIStopped:
+			return "[已停止] " + body.Text
+		case body.Status == im.AIFailed:
+			return "[生成中断] " + body.Text
+		}
+		return body.Text
 	default:
 		return "[自定义消息]"
 	}
@@ -549,6 +562,22 @@ func (s *session) pushRequests() { s.push("requests", s.requestsPayload()) }
 
 // wireEvents 把 SDK 事件/连接状态桥接到浏览器。
 func (s *session) wireEvents() {
+	// 生成中的 AI 回复：每次更新推送累积的片段；结束时 SDK 已重新读取消息，推送消息正文代替本地状态。
+	s.c.AI().OnAI(func(state im.AIStreamState) {
+		if s.isDead() {
+			return
+		}
+		s.push("ai", state)
+		if state.Status == im.AIStreaming {
+			return
+		}
+		for _, m := range s.c.Store().Messages(state.ConversationID) {
+			if m.Seq == state.MessageSeq {
+				s.push("msgs", map[string]any{"conversation_id": m.ConversationID, "messages": []*im.Message{m}})
+				break
+			}
+		}
+	})
 	s.c.OnEvent(func(e im.Event) {
 		if s.isDead() {
 			return
@@ -814,6 +843,7 @@ func init() {
 	actions["send_text"] = actSendText
 	actions["send_media"] = actSendMedia
 	actions["recall"] = actRecall
+	actions["ai_stop"] = actAIStop
 	actions["delete_msgs"] = actDeleteMsgs
 	actions["react"] = actReact
 	actions["read"] = actRead
@@ -1031,6 +1061,15 @@ func actRecall(s *session, p json.RawMessage) (any, error) {
 		return nil, errBadParams
 	}
 	return nil, s.c.Recall(context.Background(), id, seq)
+}
+
+// actAIStop 停止生成 AI 回复（《AI对话/3.接口设计》第 7.2 节）。
+func actAIStop(s *session, p json.RawMessage) (any, error) {
+	id := param(p, "stream_id")
+	if id == "" {
+		return nil, errBadParams
+	}
+	return s.c.AI().Stop(context.Background(), id)
 }
 
 func actDeleteMsgs(s *session, p json.RawMessage) (any, error) {

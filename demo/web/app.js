@@ -5,6 +5,7 @@
 // 状态
 
 const S = {
+  aiLive: {}, // 生成中的 AI 回复：stream_id → SDK 推送的累积状态（结束后删除，改读消息正文）
   me: null,
   selfSession: "",
   convs: [],
@@ -207,6 +208,13 @@ function handlePush(event, data) {
         if (cid === S.openConv) renderChatSub();
       }
       if (cid === S.openConv) { renderMessages(); markRead(); }
+      break;
+    }
+    case "ai": {
+      // 生成中的 AI 回复：只刷新那一条气泡；结束时随后的 msgs 推送带来消息正文
+      if (data.status === "streaming") S.aiLive[data.stream_id] = data;
+      else delete S.aiLive[data.stream_id];
+      if (data.conversation_id === S.openConv) refreshAIBubble(data.stream_id);
       break;
     }
     case "msgs_deleted": {
@@ -643,7 +651,9 @@ function msgHTML(m, c, isLastSelf) {
   const isGroup = c.type === "group";
   const senderName = isSelf ? "" : esc(displayNameOf(m.sender));
   let contentHTML = "";
-  if (m.type === "text") {
+  if (m.type === "ai") {
+    contentHTML = aiHTML(m);
+  } else if (m.type === "text") {
     contentHTML = esc(bodyText(m)).replace(/\n/g, "<br>");
   } else if (m.type === "image") {
     const b = m.body || {};
@@ -681,13 +691,119 @@ function msgHTML(m, c, isLastSelf) {
     <div class="msg-main">
       ${isGroup && !isSelf ? `<div class="msg-sender">${senderName}</div>` : ""}
       ${quoteHTML}
-      <div class="msg-bubble">${contentHTML}</div>
+      <div class="msg-bubble${m.type === "ai" ? " ai-bubble" : ""}">${contentHTML}</div>
       ${reactionsHTML}
       <div class="msg-meta"><span>${esc(fmtChatTime(m.created_at))}</span>${readTag}</div>
     </div>
     ${menuBtn}
   </div>`;
 }
+// ---------------------------------------------------------------------------
+// AI 回复（《AI对话/3.接口设计》第 7.2 节）：思考过程、工具进度、Markdown 正文、图片和文件；生成中显示光标和“停止生成”。
+
+function aiBodyOf(m) {
+  const b = m.body;
+  if (b == null) return {};
+  if (typeof b === "string") { try { return JSON.parse(b); } catch { return {}; } }
+  return b;
+}
+function aiHTML(m) {
+  const body = aiBodyOf(m);
+  const status = body.status || "completed";
+  const streaming = status === "streaming";
+  const live = streaming ? S.aiLive[body.stream_id] : null;
+  const parts = (live && live.parts) || body.parts || [];
+  const reasoning = parts.filter((p) => p.type === "reasoning").map((p) => p.text || "").join("\n");
+  const tools = parts.filter((p) => p.type === "tool");
+  const content = parts.filter((p) => p.type !== "reasoning" && p.type !== "tool");
+  const thinking = streaming && content.length === 0 && reasoning !== "";
+  let html = `<div class="ai-msg ai-${status}" data-testid="msg-ai" data-status="${status}" data-ai-stream="${esc(body.stream_id || "")}">`;
+  if (reasoning) html += `<details class="ai-reasoning"${thinking ? " open" : ""}><summary>${thinking ? "思考中…" : "已深度思考"}</summary><div class="ai-reasoning-text">${esc(reasoning)}</div></details>`;
+  if (tools.length) {
+    html += `<div class="ai-tools">` + tools.map((t) => {
+      const st = t.state === "running" ? (streaming ? "running" : "canceled") : t.state === "failed" ? "failed" : "done";
+      const icon = { running: "⟳", done: "✓", failed: "×", canceled: "■" }[st];
+      const note = st === "failed" ? " · 失败" : st === "canceled" ? " · 已取消" : "";
+      return `<span class="ai-tool ai-tool-${st}"><i>${icon}</i>${esc(t.title || t.name || "")}${note}</span>`;
+    }).join("") + `</div>`;
+  }
+  if (streaming && content.length === 0 && !thinking) html += `<div class="ai-typing"><i></i><i></i><i></i></div>`;
+  content.forEach((p, i) => {
+    const cursor = streaming && i === content.length - 1 ? `<span class="ai-cursor"></span>` : "";
+    if (p.type === "text") html += `<div class="ai-md">${markdownHTML(p.text || "")}${cursor}</div>`;
+    else if (p.type === "image" && p.url) html += `<img class="ai-image" src="${esc(p.url)}" alt="${esc(p.alt || "")}">`;
+    else if (p.type === "file" && p.url) html += `<div class="file-card" data-act="open-file" data-url="${esc(p.url)}"><div class="file-ico"><svg viewBox="0 0 24 24"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-6-6zm-1 7V4.5L17.5 10H12z"/></svg></div><div><div class="file-name">${esc(p.name || "文件")}</div><div class="file-size">${fmtSize(p.size || 0)}</div></div></div>`;
+  });
+  if (status === "stopped") html += `<div class="ai-note">■ 已停止生成</div>`;
+  if (status === "failed") {
+    const e = body.error || {};
+    const text = e.message || ({ timeout: "回复超时了，请重试。", max_duration: "回复超时了，请重试。", content_rejected: "回复中含有不允许的内容，已被屏蔽。" }[e.code]) || "服务暂时不可用，请稍后重试。";
+    html += `<div class="ai-error"><strong>生成中断</strong><div>${esc(text)}</div></div>`;
+  }
+  html += `<div class="ai-actions">` + (streaming
+    ? `<button data-act="ai-stop" data-stream="${esc(body.stream_id || "")}">■ 停止生成</button>`
+    : `<button data-act="ai-copy" data-text="${esc(body.text || content.map((p) => p.text || "").join("\n"))}">复制</button>`) + `</div>`;
+  return html + `</div>`;
+}
+function refreshAIBubble(streamId) {
+  const c = currentConv();
+  if (!c) return;
+  const m = (S.messages[c.id] || []).find((x) => x.type === "ai" && aiBodyOf(x).stream_id === streamId);
+  const node = document.querySelector(`[data-ai-stream="${CSS.escape(streamId)}"]`);
+  if (m && node) node.outerHTML = aiHTML(m);
+}
+/** 轻量 Markdown：段落、标题、列表、引用、代码块、表格，行内粗体、斜体、代码和 http(s) 链接；先转义再加标记。 */
+function markdownHTML(text) {
+  const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+  const inline = (t) => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*\s][^*]*)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  let out = "";
+  for (let i = 0; i < lines.length;) {
+    const line = lines[i];
+    const fence = line.match(/^\s*(```|~~~)/);
+    if (fence) {
+      const code = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith(fence[1])) code.push(lines[i++]);
+      i++;
+      out += `<pre class="ai-code"><code>${esc(code.join("\n"))}</code></pre>`;
+      continue;
+    }
+    if (!line.trim()) { i++; continue; }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { out += `<h4>${inline(h[2])}</h4>`; i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+      const cells = (row) => row.trim().replace(/^\||\|$/g, "").split("|").map((x) => x.trim());
+      let t = `<table class="ai-table"><tr>${cells(line).map((x) => `<th>${inline(x)}</th>`).join("")}</tr>`;
+      i += 2;
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) t += `<tr>${cells(lines[i++]).map((x) => `<td>${inline(x)}</td>`).join("")}</tr>`;
+      out += t + `</table>`;
+      continue;
+    }
+    if (/^\s*([-*+]|\d+[.)])\s+/.test(line)) {
+      const ordered = /^\s*\d/.test(line);
+      let items = "";
+      while (i < lines.length && /^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) && /^\s*\d/.test(lines[i]) === ordered) items += `<li>${inline(lines[i++].replace(/^\s*([-*+]|\d+[.)])\s+/, ""))}</li>`;
+      out += ordered ? `<ol>${items}</ol>` : `<ul>${items}</ul>`;
+      continue;
+    }
+    if (line.startsWith(">")) {
+      const q = [];
+      while (i < lines.length && lines[i].startsWith(">")) q.push(lines[i++].replace(/^>\s?/, ""));
+      out += `<blockquote>${q.map(inline).join("<br>")}</blockquote>`;
+      continue;
+    }
+    const p = [];
+    while (i < lines.length && lines[i].trim() && !/^\s*(```|~~~|#{1,6}\s|>|[-*+]\s|\d+[.)]\s)/.test(lines[i])) p.push(lines[i++]);
+    if (!p.length) p.push(lines[i++]);
+    out += `<p>${p.map(inline).join("<br>")}</p>`;
+  }
+  return out;
+}
+
 function bodyText(m) {
   const b = m.body;
   if (b == null) return "";
@@ -985,6 +1101,8 @@ document.addEventListener("click", async (e) => {
       case "pick-image": $("#file-image").value = ""; $("#file-image").click(); break;
       case "pick-file": $("#file-any").value = ""; $("#file-any").click(); break;
       case "open-file": window.open(d.url); break;
+      case "ai-stop": bridge("ai_stop", { stream_id: d.stream }).catch(showErr); break;
+      case "ai-copy": navigator.clipboard && navigator.clipboard.writeText(d.text || ""); break;
       case "msg-menu": {
         const c = currentConv();
         const m = (S.messages[c.id] || []).find((x) => x.seq === +d.seq);

@@ -205,6 +205,9 @@ func (w *wsManager) dispatch(f *wsFrame) {
 	if w.c.store != nil {
 		w.c.store.applyEvent(w.c, &e)
 	}
+	if w.c.ai != nil {
+		w.c.ai.handle(&e)
+	}
 	for _, h := range handlers {
 		func(h EventHandler) {
 			defer func() { _ = recover() }() // 回调 panic 不影响连接

@@ -1,5 +1,11 @@
 # 更新记录
 
+## v1.0.2 — 2026-11-03
+
+- 新增 AI 回复（`ai.go`）：`Client.AI()` 返回 `AIModule`，按长连接上的 `ai.delta`、`ai.snapshot` 累积生成中的内容，断线重连后从 `/client/v1/ai/streams/{id}/deltas` 补齐；`State`、`OnAI`、`Stop`、`Get`，包级函数 `BodyOf`。
+- 同步 IM 主仓库 `fd59ccb3` 中的 Go 客户端 SDK 与 Web Demo（AI 回复的显示与停止生成）。
+- 默认 `Config.SDKVersion` 更新为 `1.0.2`。
+
 ## v1.0.1 — 2026-10-29
 
 - 同步 IM 主仓库 `7b77a101` 中的 Go 客户端 SDK 与 Web Demo；SDK 最近业务修复来源为 `6ba1bf1d`。

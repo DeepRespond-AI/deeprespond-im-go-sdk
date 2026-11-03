@@ -1,6 +1,6 @@
 # DeepRespond IM Go 客户端 SDK
 
-当前版本：**v1.0.1**。仅依赖 Go 标准库，需要 **Go 1.26.5 或以上**。
+当前版本：**v1.0.2**。仅依赖 Go 标准库，需要 **Go 1.26.5 或以上**。
 
 以一个 IM 用户的身份运行，提供登录与令牌刷新、REST API、WebSocket 长连接与自动重连、事件订阅、同步引擎及内存 Store，适用于机器人、客服账号和常驻客户端。
 应用管理、服务端凭证和签名回调请使用 [Go 服务端 SDK](https://www.syznlink.com/docs/server-sdk/go/)。
@@ -8,11 +8,19 @@
 ## 安装
 
 ```bash
-go get github.com/DeepRespond-AI/deeprespond-im-go-sdk@v1.0.1
+go get github.com/DeepRespond-AI/deeprespond-im-go-sdk@v1.0.2
 ```
 
 模块路径为 `github.com/DeepRespond-AI/deeprespond-im-go-sdk`，包名为 `im`。
-源码和 Demo 可从 [v1.0.1 标签](https://github.com/DeepRespond-AI/deeprespond-im-go-sdk/tree/v1.0.1) 获取；从仓库根目录运行 `go run ./demo`。
+源码和 Demo 可从 [v1.0.2 标签](https://github.com/DeepRespond-AI/deeprespond-im-go-sdk/tree/v1.0.2) 获取；从仓库根目录运行 `go run ./demo`。
+
+## v1.0.2 更新
+
+- 新增 AI 回复：`cli.AI()` 跟踪机器人生成中的回复（`State`、`OnAI`），断线后自动补齐；`Stop` 停止生成，`Get` 读取服务端的当前内容；`im.BodyOf` 解析 `type` 为 `ai` 的消息正文。
+- Web Demo 显示 AI 回复：思考过程、工具调用、Markdown 正文、文件、停止生成与复制。
+- 默认登录与长连接上报版本更新为 `1.0.2`。
+
+用法见 [AI 回复](https://www.syznlink.com/docs/client/go/ai)。
 
 ## v1.0.1 更新
 
